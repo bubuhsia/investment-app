@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人投資記帳系統 v2.5 (Google雲端同步版)</title>
+    <title>個人投資記帳系統 v2.6 (雲端同步+完整功能版)</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -20,6 +20,9 @@
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
@@ -30,10 +33,10 @@
 
         // --- Error Boundary ---
         class ErrorBoundary extends Component {
-            constructor(props) { super(props); this.state = { hasError: false }; }
-            static getDerivedStateFromError(error) { return { hasError: true }; }
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
             render() {
-                if (this.state.hasError) return <div className="p-8 text-center"><h1 className="text-xl font-bold text-red-600">系統發生錯誤</h1><button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">重整</button></div>;
+                if (this.state.hasError) return <div className="p-8 text-center"><h1 className="text-xl font-bold text-red-600">系統發生錯誤</h1><pre className="text-xs text-left bg-gray-100 p-2 mt-2 overflow-auto">{this.state.error?.toString()}</pre><button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">重整頁面</button></div>;
                 return this.props.children;
             }
         }
@@ -51,11 +54,14 @@
         const IconDollarSign = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
         const IconBriefcase = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
         const IconCloud = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>;
-        const IconUploadCloud = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>;
-        const IconDownloadCloud = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="8 17 12 21 16 17"></polyline></svg>;
+        const IconUploadCloud = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>;
+        const IconDownloadCloud = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="8 17 12 21 16 17"></polyline></svg>;
         const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconPlus = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
         const IconFilter = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>;
+        const IconFileText = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
+        const IconDownload = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+        const IconUpload = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
 
         const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val || 0);
         const formatPercent = (val) => ((val || 0) * 100).toFixed(2) + "%";
@@ -212,7 +218,7 @@
                 setIsLoading(true);
                 try {
                     const payload = { transactions, currentPrices, accounts };
-                    await fetch(gasUrl, { method: 'POST', body: JSON.stringify(payload) }); // No-cors mode is tricky, standard fetch works if script deployed as 'Anyone'
+                    await fetch(gasUrl, { method: 'POST', body: JSON.stringify(payload) }); 
                     alert("上傳成功！");
                     setIsCloudModalOpen(false);
                 } catch (e) { alert("上傳失敗: " + e); }
@@ -236,9 +242,48 @@
                 setIsLoading(false);
             };
 
+            // File Logic (Restored from V2.4)
+            const addNewAccount = () => { const name = prompt("請輸入新帳戶名稱:"); if (name && !accounts.includes(name)) { setAccounts([...accounts, name]); setCurrentAccount(name); }};
+            const downloadTemplate = () => {
+                const headers = "日期,類別,帳戶名稱,代號,名稱,價格/金額,股數,手續費,證交稅,備註";
+                const example = `${getToday()},買入,${currentAccount},2330,台積電,500,1000,20,0,範例`;
+                const blob = new Blob(["\uFEFF" + headers + "\n" + example], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = "匯入範本.csv"; link.click();
+            };
+            const exportData = () => {
+                const blob = new Blob([JSON.stringify({ transactions, currentPrices, accounts })], { type: "application/json" });
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `backup_${getToday()}.json`; link.click();
+            };
+            const importData = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try { const d = JSON.parse(ev.target.result); if(d.transactions){ setTransactions(d.transactions); setCurrentPrices(d.currentPrices||{}); if(d.accounts)setAccounts(d.accounts); alert("還原成功"); } } catch(err){ alert("失敗"); }
+                }; reader.readAsText(file);
+            };
+            const processCSV = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const lines = event.target.result.split(/\r\n|\n/).filter(l => l.trim()!=='');
+                    const newTx = [];
+                    for(let i=1; i<lines.length; i++) {
+                        const c = lines[i].split(','); if(c.length<2) continue;
+                        const typeMap = { '買入':'buy', '賣出':'sell', '入金':'deposit', '出金':'withdraw', '股息':'dividend' };
+                        newTx.push({ id: Date.now()+i, date: c[0].trim(), type: typeMap[c[1].trim()]||'buy', accountId: c[2].trim()||currentAccount, symbol: c[3]?.trim()||'', name: c[4]?.trim()||'', price: parseFloat(c[5])||0, quantity: parseFloat(c[6])||0, fee: parseFloat(c[7])||0, tax: parseFloat(c[8])||0, note: c[9]?.trim()||'' });
+                    }
+                    if(newTx.length>0 && confirm(`匯入 ${newTx.length} 筆?`)) { setTransactions(p=>[...p, ...newTx]); alert("成功"); }
+                }; reader.readAsText(file);
+            };
+
+            // Form Logic (Enhanced for Sell Mode)
             const handleSellSymbolChange = (e) => {
                 const s = e.target.value; const h = portfolio.holdings.find(x => x.symbol === s);
                 setFormData(p => ({ ...p, symbol: s, name: h ? h.name : '', quantity: '', fee: '0', tax: '0' }));
+            };
+            const handleSymbolChange = (e) => {
+                const v = e.target.value; const m = STOCK_MAP.find(s => s.code === v);
+                setFormData(p => ({ ...p, symbol: v, name: m ? m.name : p.name }));
             };
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -253,10 +298,11 @@
             };
             const handleSubmit = (e) => {
                 e.preventDefault();
+                // Logic Check: Sell Quantity
                 if (modalMode === 'sell') {
                     const h = portfolio.holdings.find(x => x.symbol === formData.symbol);
                     if (!h) return alert("無庫存");
-                    if (parseFloat(formData.quantity) > h.qty) return alert("庫存不足");
+                    if (parseFloat(formData.quantity) > h.qty) return alert("賣出數量超過庫存!");
                 }
                 const newTx = { id: Date.now(), accountId: currentAccount, type: modalMode, ...formData, price: parseFloat(formData.price), quantity: parseFloat(formData.quantity) || 1 };
                 setTransactions([...transactions, newTx]);
@@ -269,20 +315,35 @@
             return (
                 <ErrorBoundary>
                 <div className="min-h-screen pb-20">
-                    <div className="bg-gray-800 text-white px-4 py-2 flex justify-between items-center text-sm">
+                    <div className="bg-gray-800 text-white px-4 py-2 flex flex-col md:flex-row justify-between items-center text-sm gap-2">
                         <div className="flex items-center space-x-2">
-                            <span>帳戶:</span>
-                            <select value={currentAccount} onChange={(e) => setCurrentAccount(e.target.value)} className="bg-gray-700 rounded px-1"><option value={currentAccount}>{currentAccount}</option></select>
+                            <span>當前帳戶:</span>
+                            <select value={currentAccount} onChange={(e) => setCurrentAccount(e.target.value)} className="bg-gray-700 rounded px-1 outline-none">
+                                {accounts.map(acc => <option key={acc} value={acc}>{acc}</option>)}
+                            </select>
+                            <button onClick={addNewAccount} className="bg-gray-600 hover:bg-gray-500 px-2 rounded text-xs" title="新增帳戶">+</button>
                         </div>
-                        <button onClick={() => setIsCloudModalOpen(true)} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-xs font-bold shadow">
-                            <IconCloud /> 雲端同步
-                        </button>
+                        <div className="flex items-center gap-2">
+                             {/* File Operations (Restored) */}
+                             <div className="flex bg-gray-700 rounded p-1 space-x-2 items-center px-2">
+                                <button onClick={downloadTemplate} className="hover:text-blue-300 flex items-center gap-1" title="下載CSV範本"><IconFileText /></button>
+                                <span className="text-gray-600">|</span>
+                                <label className="cursor-pointer hover:text-blue-300 flex items-center gap-1" title="匯入CSV"><IconPlus /><input type="file" className="hidden" accept=".csv" onChange={processCSV} /></label>
+                                <span className="text-gray-600">|</span>
+                                <button onClick={exportData} title="下載備份(JSON)" className="hover:text-blue-300"><IconDownload /></button>
+                                <label className="cursor-pointer hover:text-blue-300" title="還原備份(JSON)"><IconUpload /><input type="file" className="hidden" accept=".json" onChange={importData} /></label>
+                            </div>
+                            {/* Cloud Button */}
+                            <button onClick={() => setIsCloudModalOpen(true)} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-xs font-bold shadow">
+                                <IconCloud /> 雲端同步
+                            </button>
+                        </div>
                     </div>
 
                     <header className="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
-                        <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+                        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-2">
                             <div className="flex items-center space-x-2"><div className="bg-blue-600 text-white p-2 rounded-lg"><IconBriefcase /></div><h1 className="text-xl font-bold text-gray-800">投資紀錄</h1></div>
-                            <div className="flex items-center bg-gray-50 p-1 rounded-lg border text-sm"><IconFilter /><input type="date" value={dateFilter.start} onChange={(e)=>setDateFilter({...dateFilter, start: e.target.value})} className="bg-transparent w-28 mx-1" />➜<input type="date" value={dateFilter.end} onChange={(e)=>setDateFilter({...dateFilter, end: e.target.value})} className="bg-transparent w-28 mx-1" /></div>
+                            <div className="flex items-center bg-gray-50 p-1 rounded-lg border text-sm"><IconFilter /><input type="date" value={dateFilter.start} onChange={(e)=>setDateFilter({...dateFilter, start: e.target.value})} className="bg-transparent w-28 mx-1 outline-none" />➜<input type="date" value={dateFilter.end} onChange={(e)=>setDateFilter({...dateFilter, end: e.target.value})} className="bg-transparent w-28 mx-1 outline-none" /></div>
                         </div>
                     </header>
 
@@ -294,50 +355,66 @@
                             <div className="bg-white p-4 rounded-xl shadow-sm border"><div className="text-gray-500 text-xs">總損益</div><div className={`text-xl font-bold ${portfolio.totalPnL>0?'text-stock-up':'text-stock-down'}`}>{formatCurrency(portfolio.totalPnL)}</div></div>
                         </div>
 
-                        <div className="flex space-x-1 mb-4 overflow-x-auto pb-2">
-                            {['dashboard', 'account_pnl', 'cash_flow', 'holdings', 'history'].map(tab => <button key={tab} onClick={() => setView(tab)} className={`px-4 py-2 rounded-md text-sm whitespace-nowrap ${view === tab ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600'}`}>{{'dashboard':'儀表板','account_pnl':'損益','cash_flow':'流水帳','holdings':'庫存','history':'明細'}[tab]}</button>)}
+                        <div className="flex space-x-1 mb-4 overflow-x-auto pb-2 no-scrollbar">
+                            {['dashboard', 'account_pnl', 'cash_flow', 'holdings', 'history'].map(tab => <button key={tab} onClick={() => setView(tab)} className={`px-4 py-2 rounded-md text-sm whitespace-nowrap ${view === tab ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{{'dashboard':'儀表板','account_pnl':'損益','cash_flow':'流水帳','holdings':'庫存','history':'明細'}[tab]}</button>)}
                         </div>
 
                         <div className="bg-white rounded-xl shadow-sm border min-h-[400px]">
-                            <div className="p-4 border-b flex gap-2 overflow-x-auto">
-                                <button onClick={() => {setModalMode('buy');setIsModalOpen(true)}} className="flex items-center space-x-1 px-4 py-2 bg-red-500 text-white rounded text-sm"><IconPlus /><span>買入</span></button>
-                                <button onClick={() => {setModalMode('sell');setIsModalOpen(true)}} className="flex items-center space-x-1 px-4 py-2 bg-green-500 text-white rounded text-sm"><IconTrendingDown /><span>賣出</span></button>
-                                <button onClick={() => {setModalMode('dividend');setIsModalOpen(true)}} className="px-4 py-2 bg-yellow-500 text-white rounded text-sm"><IconDollarSign /></button>
+                            <div className="p-4 border-b flex gap-2 overflow-x-auto no-scrollbar">
+                                <button onClick={() => {setModalMode('buy');setIsModalOpen(true)}} className="flex items-center space-x-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm whitespace-nowrap"><IconPlus /><span>買入</span></button>
+                                <button onClick={() => {setModalMode('sell');setIsModalOpen(true)}} className="flex items-center space-x-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm whitespace-nowrap"><IconTrendingDown /><span>賣出</span></button>
+                                <button onClick={() => {setModalMode('dividend');setIsModalOpen(true)}} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm whitespace-nowrap"><IconDollarSign /></button>
                                 <div className="w-px bg-gray-200 mx-2"></div>
-                                <button onClick={() => {setModalMode('deposit');setIsModalOpen(true)}} className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">入金</button>
-                                <button onClick={() => {setModalMode('withdraw');setIsModalOpen(true)}} className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">出金</button>
+                                <button onClick={() => {setModalMode('deposit');setIsModalOpen(true)}} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm whitespace-nowrap">入金</button>
+                                <button onClick={() => {setModalMode('withdraw');setIsModalOpen(true)}} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm whitespace-nowrap">出金</button>
                             </div>
 
                             <div className="p-0 overflow-x-auto">
                                 {view === 'dashboard' && <div className="p-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8"><PieChart data={portfolio.assetAllocation} /><BarChart data={portfolio.monthlyPnLData} /></div></div>}
                                 {view === 'account_pnl' && <div className="p-6"><div className="text-3xl font-bold mb-4 text-center">{formatCurrency(portfolio.periodTotalPnL)}</div><div className="grid grid-cols-2 gap-4"><div className="p-3 bg-gray-50">價差: {formatCurrency(portfolio.periodRealizedPnL)}</div><div className="p-3 bg-yellow-50">股息: {formatCurrency(portfolio.periodDividend)}</div></div></div>}
-                                {view === 'holdings' && <table className="w-full text-sm text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="p-3">代號</th><th className="p-3 text-right">股數</th><th className="p-3 text-right">現價</th><th className="p-3 text-right">損益</th></tr></thead><tbody>{portfolio.holdings.map(h=><tr key={h.symbol} className="border-b"><td className="p-3 font-bold">{h.name}<div className="text-xs font-normal text-gray-400">{h.symbol}</div></td><td className="p-3 text-right">{h.qty}</td><td className="p-3 text-right"><input type="number" className="w-16 text-right border rounded bg-yellow-50" value={h.currentPrice} onChange={(e)=>setCurrentPrices(p=>({...p,[h.symbol]:e.target.value}))}/></td><td className={`p-3 text-right font-bold ${h.unrealizedPnL>0?'text-stock-up':'text-stock-down'}`}>{formatCurrency(h.unrealizedPnL)}</td></tr>)}</tbody></table>}
-                                {(view === 'history' || view === 'cash_flow') && <table className="w-full text-sm text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="p-3">日期</th><th className="p-3">項目</th><th className="p-3 text-right">金額</th><th className="p-3"></th></tr></thead><tbody>{transactions.filter(t=>t.accountId===currentAccount).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{ const total=(t.price*t.quantity);const net=t.type==='buy'?-(total+t.fee):t.type==='sell'?(total-t.fee-t.tax):t.type==='withdraw'?-total:total;return(<tr key={t.id} className="border-b"><td className="p-3 text-xs text-gray-500">{t.date}</td><td className="p-3"><div><span className={`text-xs px-1 rounded ${t.type==='buy'?'bg-red-100 text-red-700':t.type==='sell'?'bg-green-100 text-green-700':'bg-gray-100'}`}>{{buy:'買',sell:'賣',dividend:'息',deposit:'入',withdraw:'出'}[t.type]}</span> {t.name||t.symbol}</div></td><td className={`p-3 text-right font-bold ${net>0?'text-stock-up':'text-stock-down'}`}>{formatCurrency(Math.abs(net))}</td><td className="p-3"><button onClick={()=>{if(confirm('刪除?'))setTransactions(transactions.filter(x=>x.id!==t.id))}} className="text-gray-300 hover:text-red-500">×</button></td></tr>)})}</tbody></table>}
+                                {view === 'holdings' && <table className="w-full text-sm text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="p-3">代號</th><th className="p-3 text-right">股數</th><th className="p-3 text-right">現價</th><th className="p-3 text-right">損益</th></tr></thead><tbody>{portfolio.holdings.map(h=><tr key={h.symbol} className="border-b hover:bg-gray-50"><td className="p-3 font-bold">{h.name}<div className="text-xs font-normal text-gray-400">{h.symbol}</div></td><td className="p-3 text-right">{h.qty}</td><td className="p-3 text-right"><input type="number" className="w-16 text-right border rounded bg-yellow-50" value={h.currentPrice} onChange={(e)=>setCurrentPrices(p=>({...p,[h.symbol]:e.target.value}))}/></td><td className={`p-3 text-right font-bold ${h.unrealizedPnL>0?'text-stock-up':'text-stock-down'}`}>{formatCurrency(h.unrealizedPnL)}</td></tr>)}</tbody></table>}
+                                {(view === 'history' || view === 'cash_flow') && <table className="w-full text-sm text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="p-3">日期</th><th className="p-3">項目</th><th className="p-3 text-right">金額</th><th className="p-3"></th></tr></thead><tbody>{transactions.filter(t=>t.accountId===currentAccount).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{ const total=(t.price*t.quantity);const net=t.type==='buy'?-(total+t.fee):t.type==='sell'?(total-t.fee-t.tax):t.type==='withdraw'?-total:total;return(<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-3 text-xs text-gray-500">{t.date}</td><td className="p-3"><div><span className={`text-xs px-1 rounded ${t.type==='buy'?'bg-red-100 text-red-700':t.type==='sell'?'bg-green-100 text-green-700':'bg-gray-100'}`}>{{buy:'買',sell:'賣',dividend:'息',deposit:'入',withdraw:'出'}[t.type]}</span> {t.name||t.symbol}</div></td><td className={`p-3 text-right font-bold ${net>0?'text-stock-up':'text-stock-down'}`}>{formatCurrency(Math.abs(net))}</td><td className="p-3"><button onClick={()=>{if(confirm('刪除?'))setTransactions(transactions.filter(x=>x.id!==t.id))}} className="text-gray-300 hover:text-red-500"><IconTrash /></button></td></tr>)})}</tbody></table>}
                             </div>
                         </div>
                     </div>
 
-                    {/* Trade Modal */}
+                    {/* Trade Modal (Restored V2.4 Logic) */}
                     {isModalOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
                                 <h2 className="text-xl font-bold mb-4">新增紀錄</h2>
                                 <form onSubmit={handleSubmit} className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input type="date" name="date" required className="border rounded p-2 w-full" value={formData.date} onChange={handleInputChange} />
-                                        {(modalMode!=='deposit'&&modalMode!=='withdraw') && (modalMode==='sell' ? <select name="symbol" required className="border rounded p-2 w-full" value={formData.symbol} onChange={handleSellSymbolChange}><option value="">選股</option>{portfolio.holdings.map(h=><option key={h.symbol} value={h.symbol}>{h.name}</option>)}</select> : <input type="text" name="symbol" placeholder="代號" required className="border rounded p-2 w-full" value={formData.symbol} onChange={(e)=>{const m=STOCK_MAP.find(s=>s.code===e.target.value);setFormData({...formData,symbol:e.target.value,name:m?m.name:formData.name})}} />)}
+                                        <div><label className="block text-sm text-gray-500 mb-1">日期</label><input type="date" name="date" required className="border rounded p-2 w-full outline-none" value={formData.date} onChange={handleInputChange} /></div>
+                                        {(modalMode!=='deposit'&&modalMode!=='withdraw') && (
+                                            <div>
+                                                <label className="block text-sm text-gray-500 mb-1">代號</label>
+                                                {modalMode==='sell' ? 
+                                                    <select name="symbol" required className="border rounded p-2 w-full bg-white outline-none" value={formData.symbol} onChange={handleSellSymbolChange}><option value="">選擇庫存</option>{portfolio.holdings.map(h=><option key={h.symbol} value={h.symbol}>{h.name}</option>)}</select> 
+                                                    : 
+                                                    <input type="text" name="symbol" placeholder="代號" required className="border rounded p-2 w-full outline-none" value={formData.symbol} onChange={handleSymbolChange} />
+                                                }
+                                            </div>
+                                        )}
                                     </div>
+                                    {(modalMode!=='deposit'&&modalMode!=='withdraw') && <div><label className="block text-sm text-gray-500 mb-1">名稱</label><input type="text" name="name" className="border rounded p-2 w-full bg-gray-50 outline-none" value={formData.name} readOnly={modalMode==='sell'} onChange={handleInputChange}/></div>}
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input type="number" name="price" placeholder="價格/金額" required className="border rounded p-2 w-full" value={formData.price} onChange={handleInputChange} />
-                                        {(modalMode==='buy'||modalMode==='sell') && <div className="relative"><input type="number" name="quantity" placeholder="股數" required className={`border rounded p-2 w-full ${isQtyOver?'border-red-500 bg-red-50':''}`} value={formData.quantity} onChange={handleInputChange} />{modalMode==='sell'&&currentHolding&&<button type="button" onClick={()=>handleInputChange({target:{name:'quantity',value:currentHolding.qty}})} className="absolute right-2 top-2 text-xs text-blue-500">最大</button>}</div>}
+                                        <div><label className="block text-sm text-gray-500 mb-1">價格/金額</label><input type="number" name="price" required className="border rounded p-2 w-full outline-none" value={formData.price} onChange={handleInputChange} /></div>
+                                        {(modalMode==='buy'||modalMode==='sell') && <div className="relative">
+                                            <label className="block text-sm text-gray-500 mb-1">股數</label>
+                                            <input type="number" name="quantity" required className={`border rounded p-2 w-full outline-none ${isQtyOver?'border-red-500 bg-red-50':''}`} value={formData.quantity} onChange={handleInputChange} />
+                                            {modalMode==='sell'&&currentHolding&&<button type="button" onClick={()=>handleInputChange({target:{name:'quantity',value:currentHolding.qty}})} className="absolute right-2 top-8 text-xs text-blue-500 bg-blue-50 px-1 rounded">最大: {currentHolding.qty}</button>}
+                                        </div>}
                                     </div>
-                                    <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={()=>setIsModalOpen(false)} className="px-4 py-2 bg-gray-100 rounded">取消</button><button type="submit" disabled={isQtyOver} className="px-4 py-2 bg-blue-600 text-white rounded">確定</button></div>
+                                    {(modalMode==='buy'||modalMode==='sell') && <div className="grid grid-cols-2 gap-4 bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-400">手續費</label><input type="number" name="fee" className="w-full bg-transparent border-b outline-none" value={formData.fee} onChange={handleInputChange}/></div><div><label className="text-xs text-gray-400">證交稅</label><input type="number" name="tax" className="w-full bg-transparent border-b outline-none" value={formData.tax} onChange={handleInputChange} disabled={modalMode==='buy'}/></div></div>}
+                                    <div><label className="block text-sm text-gray-500 mb-1">備註</label><input type="text" name="note" className="border rounded p-2 w-full outline-none" value={formData.note} onChange={handleInputChange} /></div>
+                                    <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={()=>setIsModalOpen(false)} className="px-4 py-2 bg-gray-100 rounded">取消</button><button type="submit" disabled={isQtyOver} className={`px-4 py-2 text-white rounded ${isQtyOver?'bg-gray-400':'bg-blue-600'}`}>確定</button></div>
                                 </form>
                             </div>
                         </div>
                     )}
 
-                    {/* Cloud Sync Modal */}
+                    {/* Cloud Sync Modal (V2.5 Feature) */}
                     {isCloudModalOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
